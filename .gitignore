@@ -1,0 +1,29 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Xcode
+DerivedData/
+xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# macOS
+.DS_Store
+._*
+
+# Temporary files
+*.swp
+*~
+
+# Prebuilt XCFramework (distributed via GitHub Releases)
+Frameworks/
+
+# Models (too large for git — download via ModelDownloader)
+*.litertlm
