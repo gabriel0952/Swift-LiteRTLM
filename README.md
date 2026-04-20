@@ -2,40 +2,27 @@
 
 **Language:** English | [繁體中文](README.zh-TW.md)
 
----
-
-A Swift Package Manager library that wraps Google's [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM) C++ runtime into a clean, idiomatic Swift interface for on-device LLM inference on iOS.
+A Swift Package for running LLM inference on-device using Google's [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM) C++ runtime. Supports Gemma and other LiteRT-LM models on iOS with multi-turn chat, streaming, multimodal inputs, tool calling, and more.
 
 ## Features
 
-- 🚀 **On-device LLM inference** — run Gemma and other LiteRT-LM models entirely on-device
-- 💬 **Conversation API** — multi-turn chat with system instructions, streaming, and tool calling
-- 🔧 **Session API** — low-level `generateContent` / `generateContentStream` for advanced use cases
-- 📥 **Built-in model downloader** — download `.litertlm` models with progress tracking, pause/resume
-- 🖼️ **Multimodal** — send images and audio alongside text (vision & audio backends)
-- 🛠️ **Tool use (Function Calling)** — define tools with JSON Schema, automatic or manual execution
-- 🖼️ **Image preprocessing** — resize camera images before inference with `ImageProcessor`
-- ⚡ **Swift 6 concurrency** — `actor`-based thread safety, `async`/`await`, `AsyncThrowingStream`
-- 🎛️ **Backend flexibility** — CPU, GPU (Metal), or NPU acceleration
-
-> **Note:** This package requires a prebuilt `LiteRTLM.xcframework`. Download the latest release from [GitHub Releases](https://github.com/gabriel0952/Swift-LiteRTLM/releases) and place it at `Frameworks/LiteRTLM.xcframework`. To rebuild from source instead, see [Building the XCFramework](#building-the-xcframework).
-
----
+- On-device LLM inference with Gemma and other LiteRT-LM models
+- Multi-turn conversation API with system instructions and streaming
+- Low-level Session API for advanced use cases
+- Built-in model downloader with progress tracking and pause/resume
+- Multimodal input: images and audio alongside text
+- Tool use (function calling) with JSON Schema definitions
+- Image preprocessing for camera photos
+- Swift 6 concurrency with actor-based thread safety
+- CPU, GPU (Metal), and NPU backend support
 
 ## Requirements
 
-| Requirement | Minimum |
-|---|---|
-| Platform | iOS 17+ |
-| Xcode | 16+ |
-| Swift | 6.0 |
-| Model | `.litertlm` format (e.g. [Gemma 4 E2B](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm)) |
-
----
+- iOS 17+, Xcode 16+, Swift 6.0
+- A `.litertlm` model file (e.g. [Gemma 4 E2B](https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm))
+- The prebuilt `LiteRTLM.xcframework` — download from [GitHub Releases](https://github.com/gabriel0952/Swift-LiteRTLM/releases) and place it at `Frameworks/LiteRTLM.xcframework`
 
 ## Installation
-
-### Swift Package Manager
 
 Add to your `Package.swift`:
 
@@ -45,31 +32,13 @@ dependencies: [
 ]
 ```
 
-Or in Xcode: **File → Add Package Dependencies** and enter the repository URL.
-
----
-
-## Building the XCFramework
-
-Download the prebuilt `LiteRTLM.xcframework` from [GitHub Releases](https://github.com/gabriel0952/Swift-LiteRTLM/releases) and place it at `Frameworks/LiteRTLM.xcframework`. To rebuild from source (e.g. to pick up a newer upstream release):
-
-```bash
-# Requirements: Xcode, Bazel (https://bazel.build)
-bash Scripts/build_xcframework.sh
-
-# Build a specific upstream version
-LITERT_LM_REF=v0.10.1 bash Scripts/build_xcframework.sh
-```
-
-The script clones `google-ai-edge/LiteRT-LM`, patches the stream callback for null-termination safety, builds for `ios-arm64` (device) and `ios-arm64-simulator`, then produces `Frameworks/LiteRTLM.xcframework`.
-
----
+Or in Xcode: File > Add Package Dependencies, then enter the repository URL.
 
 ## Getting Started
 
 ### 1. Download the Model
 
-Use the built-in `ModelDownloader` to download a `.litertlm` model (~2.6 GB, only needed once):
+Use the built-in `ModelDownloader` to download a `.litertlm` model (about 2.6 GB, only needed once):
 
 ```swift
 import LiteRTLM
@@ -93,25 +62,23 @@ let engine = Engine(config: config)
 try await engine.initialize()
 ```
 
-### 3. Create a Conversation
+### 3. Create a Conversation and Send a Message
 
 ```swift
 let conversation = try await engine.createConversation()
-```
 
-### 4. Send a Message
-
-```swift
-// Plain text
 let reply = try await conversation.sendMessage("What is the capital of France?")
 print(reply)  // "Paris is the capital of France."
+```
 
-// Using Contents
+You can also use `Contents` for richer input:
+
+```swift
 let reply = try await conversation.sendMessage(Contents.of("Explain gravity briefly."))
 print(reply.contents.description)
 ```
 
-### 5. Streaming Response
+### 4. Streaming Response
 
 ```swift
 for await partial in try await conversation.sendMessageAsync("Tell me a story.") {
@@ -119,14 +86,12 @@ for await partial in try await conversation.sendMessageAsync("Tell me a story.")
 }
 ```
 
-### 6. Close Resources
+### 5. Close Resources
 
 ```swift
 await conversation.close()
 await engine.close()
 ```
-
----
 
 ## Download Progress Tracking
 
@@ -156,17 +121,13 @@ struct DownloadView: View {
 }
 ```
 
-> **Note:** Downloads run in the foreground. If the app is suspended, the download stops.
-> Resume data is persisted to disk, so calling `download()` again continues where it left off.
+Downloads run in the foreground. If the app is suspended, the download stops. Resume data is persisted to disk, so calling `download()` again continues where it left off.
 
----
+## Multimodal: Vision and Audio
 
-## Multimodal: Vision & Audio
-
-Vision and audio inputs use the `Content` enum. Pass images as raw JPEG/PNG bytes and audio as WAV/FLAC bytes.
+Pass images (JPEG/PNG) and audio (WAV/FLAC) as raw bytes using the `Content` enum:
 
 ```swift
-// Enable vision and audio when creating the engine
 let config = EngineConfig(
     modelPath: "/path/to/model.litertlm",
     backend: .gpu,
@@ -178,21 +139,21 @@ try await engine.initialize()
 
 let conversation = try await engine.createConversation()
 
-// Vision — send an image with a text prompt
+// Send an image with a text prompt
 let imageData = try Data(contentsOf: imageURL)
 let reply = try await conversation.sendMessage(
     Contents.of(.imageBytes(imageData), .text("Describe what you see in this image."))
 )
 print(reply)
 
-// Audio — send audio with a text prompt
+// Send audio with a text prompt
 let audioData = try Data(contentsOf: audioURL)
 let reply = try await conversation.sendMessage(
     Contents.of(.audioBytes(audioData), .text("What is being said?"))
 )
 print(reply)
 
-// Multimodal — image + audio + text in one turn
+// Image + audio + text in one turn
 let reply = try await conversation.sendMessage(
     Contents.of(
         .imageBytes(imageData),
@@ -202,22 +163,17 @@ let reply = try await conversation.sendMessage(
 )
 ```
 
----
-
 ## Conversation Configuration
 
 ```swift
 let convConfig = ConversationConfig(
-    // System instruction sets the model's persona / behavior
     systemInstruction: Contents.of("You are a helpful iOS development assistant."),
 
-    // Pre-seed with prior context
     initialMessages: [
         .user("My app crashes on launch."),
         .model("Can you share the crash log?"),
     ],
 
-    // Sampling parameters
     samplerConfig: SamplerConfig(topK: 40, topP: 0.95, temperature: 0.8),
 
     // Enable thinking channel (for supported models like Gemma 3n)
@@ -234,8 +190,6 @@ let reply = try await conversation.sendMessage("Solve: 24 × 7")
 print(reply.channels["thinking"] ?? "")  // chain-of-thought reasoning
 print(reply.contents.description)        // final answer
 ```
-
----
 
 ## Tool Use
 
@@ -255,7 +209,6 @@ let weatherTool = ToolDefinition(
     }
     """
 ) { argsJSON in
-    // Parse argsJSON, call your weather API, return JSON result
     return "{\"temperature\": 28, \"condition\": \"Sunny\"}"
 }
 
@@ -269,100 +222,11 @@ let reply = try await conversation.sendMessage("What's the weather in Taipei?")
 print(reply)  // "The weather in Taipei is 28°C and Sunny."
 ```
 
-When `automaticToolCalling` is `false`, tool calls are returned to you in `reply.toolCalls` for manual execution.
-
----
-
-## Engine Configuration
-
-```swift
-let config = EngineConfig(
-    modelPath: "/path/to/model.litertlm",
-
-    // Main inference backend
-    backend: .gpu,
-
-    // Vision executor (nil = disabled)
-    visionBackend: .gpu,
-
-    // Audio executor (nil = disabled)
-    audioBackend: .cpu(),
-
-    // KV-cache size in tokens (nil = model default)
-    maxNumTokens: 4096,
-
-    // Max images per turn (nil = model default)
-    maxNumImages: 4,
-
-    // Cache directory (nil = same folder as model, ":nocache" = disabled)
-    cacheDir: FileManager.default.temporaryDirectory.path
-)
-```
-
-### Backends
-
-| Value | Description |
-|-------|-------------|
-| `.cpu()` | CPU inference. Optionally set thread count: `.cpu(numThreads: 4)` |
-| `.gpu` | GPU acceleration via Metal |
-| `.npu(nativeLibraryPath:)` | NPU/ANE acceleration |
-
----
-
-## Low-level Session API
-
-Use `Session` when you need direct control over the prefill/decode loop — for example, to implement speculative decoding or inspect individual decode steps.
-
-> **Note:** When linked against the official upstream LiteRT-LM public C API,
-> `generateContent` and `generateContentStream` are fully supported, but
-> `runPrefill`, `runDecode`, and `Session.cancelProcess()` currently throw
-> `LiteRtLmError.unsupportedFeature` because those controls are not exposed by
-> the public C bridge.
-
-```swift
-let sessionConfig = SessionConfig(
-    samplerConfig: SamplerConfig(topK: 40, topP: 1.0, temperature: 0.7)
-)
-let session = try await engine.createSession(config: sessionConfig)
-
-// One-shot generation
-let result = try await session.generateContent([.text("Hello, world!")])
-
-// Streaming generation
-for await token in try await session.generateContentStream([.text("Tell me a joke.")]) {
-    print(token, terminator: "")
-}
-
-// Manual prefill + decode loop
-// Currently unavailable through the official public C API:
-// try await session.runPrefill([.text("The quick brown fox")])
-// let token1 = try await session.runDecode()
-// let token2 = try await session.runDecode()
-
-// Session-level cancellation is also unavailable through the public C API:
-// try await session.cancelProcess()
-
-await session.close()
-```
-
----
-
-## Logging
-
-```swift
-Engine.setNativeMinLogSeverity(.warning)  // suppress verbose/debug/info logs
-```
-
-Available levels: `.verbose`, `.debug`, `.info`, `.warning`, `.error`, `.fatal`
-(`.verbose` and `.debug` currently map to the native `info` threshold because the
-official LiteRT-LM public C API exposes only info/warning/error/fatal.)
-
----
+When `automaticToolCalling` is `false`, tool calls are returned in `reply.toolCalls` for manual execution.
 
 ## Image Preprocessing
 
-Camera images are often 4000×3000+ pixels — far larger than needed for on-device LLMs.
-Use `ImageProcessor` to resize images before sending them to the model:
+Camera images are often 4000×3000+ pixels, far larger than needed for on-device LLMs. Use `ImageProcessor` to resize before inference:
 
 ```swift
 let photoData = try Data(contentsOf: photoURL)
@@ -392,12 +256,64 @@ if let size = ImageProcessor.dimensions(of: photoData) {
 }
 ```
 
----
+## Engine Configuration
+
+```swift
+let config = EngineConfig(
+    modelPath: "/path/to/model.litertlm",
+    backend: .gpu,
+    visionBackend: .gpu,       // nil = disabled
+    audioBackend: .cpu(),      // nil = disabled
+    maxNumTokens: 4096,        // KV-cache size (nil = model default)
+    maxNumImages: 4,           // max images per turn (nil = model default)
+    cacheDir: FileManager.default.temporaryDirectory.path
+)
+```
+
+Available backends:
+
+| Value | Description |
+|-------|-------------|
+| `.cpu()` | CPU inference. Optionally set thread count: `.cpu(numThreads: 4)` |
+| `.gpu` | GPU acceleration via Metal |
+| `.npu(nativeLibraryPath:)` | NPU/ANE acceleration |
+
+## Low-level Session API
+
+Use `Session` when you need direct control over the prefill/decode loop, for example to implement speculative decoding or inspect individual decode steps.
+
+Note: `generateContent` and `generateContentStream` are fully supported. However, `runPrefill`, `runDecode`, and `Session.cancelProcess()` currently throw `LiteRtLmError.unsupportedFeature` because those controls are not exposed by the upstream public C API.
+
+```swift
+let sessionConfig = SessionConfig(
+    samplerConfig: SamplerConfig(topK: 40, topP: 1.0, temperature: 0.7)
+)
+let session = try await engine.createSession(config: sessionConfig)
+
+// One-shot generation
+let result = try await session.generateContent([.text("Hello, world!")])
+
+// Streaming generation
+for await token in try await session.generateContentStream([.text("Tell me a joke.")]) {
+    print(token, terminator: "")
+}
+
+await session.close()
+```
+
+## Logging
+
+```swift
+Engine.setNativeMinLogSeverity(.warning)  // suppress verbose/debug/info logs
+```
+
+Available levels: `.verbose`, `.debug`, `.info`, `.warning`, `.error`, `.fatal`
+
+Note: `.verbose` and `.debug` currently map to the native `info` threshold because the official LiteRT-LM public C API exposes only info/warning/error/fatal.
 
 ## Error Handling
 
-All errors conform to `LocalizedError`, so `error.localizedDescription` returns a
-human-readable message suitable for UI display.
+All errors conform to `LocalizedError`, so `error.localizedDescription` returns a human-readable message suitable for UI display.
 
 ```swift
 do {
@@ -417,9 +333,7 @@ do {
 }
 ```
 
----
-
-## API Overview
+## API Reference
 
 ### Engine
 
@@ -431,8 +345,8 @@ do {
 | `createConversation(config:)` | Create a new `Conversation` |
 | `createSession(config:)` | Create a low-level `Session` |
 | `setNativeMinLogSeverity(_:)` | Set global log level (static) |
-| `status` | `Engine.Status` — `.notLoaded`, `.loading`, `.ready`, `.failed(String)` |
-| `isInitialized` | `Bool` — shorthand for `status == .ready` |
+| `status` | `.notLoaded`, `.loading`, `.ready`, `.failed(String)` |
+| `isInitialized` | `true` when `status == .ready` |
 
 ### Conversation
 
@@ -461,15 +375,15 @@ do {
 | Method / Property | Description |
 |-------------------|-------------|
 | `init(modelsDirectory:)` | Create downloader. Default: `~/Library/Application Support/LiteRTLM/Models/` |
-| `download(from:)` | Download model from URL. Defaults to Gemma 4 E2B on HuggingFace |
-| `pause()` | Pause download. Resume data is persisted to disk |
+| `download(from:)` | Download model. Defaults to Gemma 4 E2B on HuggingFace |
+| `pause()` | Pause download (resume data is persisted) |
 | `cancel()` | Cancel download and discard resume data |
 | `deleteModel()` | Delete the downloaded model file |
-| `status` | `DownloadStatus` — current download state |
-| `progress` | `Double` — 0.0 to 1.0 |
-| `isDownloaded` | `Bool` — whether the model file exists on disk |
-| `localFileURL` | `URL` — full path to model file |
-| `modelFilePath` | `String` — convenience for `EngineConfig(modelPath:)` |
+| `status` | Current download state |
+| `progress` | 0.0 to 1.0 |
+| `isDownloaded` | Whether the model file exists on disk |
+| `localFileURL` | Full path to model file |
+| `modelFilePath` | Convenience for `EngineConfig(modelPath:)` |
 
 ### ImageProcessor
 
@@ -485,10 +399,22 @@ do {
 |----------|-------------|
 | `modelPath` | Path to `.litertlm` model file |
 | `backend` | `.cpu(numThreads:)`, `.gpu`, `.npu(nativeLibraryPath:)` |
-| `cacheDir` | Cache directory path. `nil` = model's directory, `":nocache"` = disabled |
-| `recommendedCacheDirectory` | (static) `~/Library/Caches/LiteRTLM/` — safe default |
+| `cacheDir` | Cache directory. `nil` = model's directory, `":nocache"` = disabled |
+| `recommendedCacheDirectory` | (static) `~/Library/Caches/LiteRTLM/` |
 
----
+## Building the XCFramework
+
+Download the prebuilt `LiteRTLM.xcframework` from [GitHub Releases](https://github.com/gabriel0952/Swift-LiteRTLM/releases) and place it at `Frameworks/LiteRTLM.xcframework`. To rebuild from source (e.g. to pick up a newer upstream release):
+
+```bash
+# Requirements: Xcode, Bazel (https://bazel.build)
+bash Scripts/build_xcframework.sh
+
+# Build a specific upstream version
+LITERT_LM_REF=v0.10.1 bash Scripts/build_xcframework.sh
+```
+
+The script clones `google-ai-edge/LiteRT-LM`, patches the stream callback for null-termination safety, builds for `ios-arm64` (device) and `ios-arm64-simulator`, then produces `Frameworks/LiteRTLM.xcframework`.
 
 ## Architecture
 
@@ -501,20 +427,15 @@ This package aligns its public API with the official [Kotlin LiteRT-LM SDK](http
 | `synchronized {}` | Swift actor isolation |
 | `@Tool` annotation | `ToolDefinition` struct |
 
----
-
 ## Known Limitations
 
-- **`Session.runPrefill` / `runDecode` / `cancelProcess`** are not exposed by the upstream [public C API](https://github.com/google-ai-edge/LiteRT-LM/blob/main/c/engine.h). These methods throw `LiteRtLmError.unsupportedFeature`.
-- **Conversation `channels`** (e.g. thinking channel) configuration is passed at creation time but depends on model support.
-- **CPU `numThreads`** and **NPU `nativeLibraryPath`** are accepted in `EngineConfig` but not propagated through the current upstream C API — the engine uses its own defaults.
-- **iOS Simulator**: GPU backend is not available on Simulator. Use `.cpu()` for testing. Session streaming falls back to synchronous generation on Simulator.
-
----
+- `Session.runPrefill` / `runDecode` / `cancelProcess` are not exposed by the upstream [public C API](https://github.com/google-ai-edge/LiteRT-LM/blob/main/c/engine.h). These methods throw `LiteRtLmError.unsupportedFeature`.
+- Conversation `channels` (e.g. thinking channel) configuration is passed at creation time but depends on model support.
+- CPU `numThreads` and NPU `nativeLibraryPath` are accepted in `EngineConfig` but not propagated through the current upstream C API — the engine uses its own defaults.
+- iOS Simulator: GPU backend is not available. Use `.cpu()` for testing. Session streaming falls back to synchronous generation on Simulator.
 
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE) for details.
 
 This project wraps [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM), Copyright 2025 Google LLC, licensed under Apache 2.0.
-
