@@ -27,3 +27,19 @@ Frameworks/
 
 # Models (too large for git — download via ModelDownloader)
 *.litertlm
+
+# Flutter test app — generated / CocoaPods / IDE artifacts
+Apps/test-app/ios/Pods/
+Apps/test-app/ios/Flutter/Generated.xcconfig
+Apps/test-app/ios/Flutter/flutter_export_environment.sh
+Apps/test-app/ios/Flutter/ephemeral/
+Apps/test-app/.dart_tool/
+Apps/test-app/build/
+Apps/test-app/.flutter-plugins
+Apps/test-app/.flutter-plugins-dependencies
+Apps/test-app/.metadata
+Apps/test-app/*.iml
+
+# Fork upstream workspaces (full upstream clones — not tracked directly)
+Forks/LiteRT/upstream/
+Forks/LiteRT-LM/upstream/

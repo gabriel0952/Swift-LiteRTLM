@@ -4,6 +4,30 @@
 
 A Swift Package for running LLM inference on-device using Google's [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM) C++ runtime. Supports Gemma and other LiteRT-LM models on iOS with multi-turn chat, streaming, multimodal inputs, tool calling, and more.
 
+## Repository Layout
+
+- `Package.swift`, `Sources/`, `Tests/`, `Frameworks/`: the Swift Package itself
+- `Apps/test-app/`: the local Flutter test app for package validation
+- `Forks/LiteRT-LM/`: reserved for the future LiteRT-LM fork workspace
+- `Forks/LiteRT/`: reserved for the future LiteRT fork workspace
+- `Docs/Plans/`: implementation plans and research notes
+
+## Current Status
+
+As of 2026-04-20, the Swift Package itself is usable and the local validation app in `Apps/test-app/` builds against the package successfully.
+
+Current known limitation:
+
+- iOS `GPU` backend is still blocked on the public upstream LiteRT / LiteRT-LM delivery path. The runtime attempts to load GPU accelerator dylibs such as `libLiteRtMetalAccelerator.dylib`, but the current public iOS packaging path does not provide a complete, working set of those artifacts.
+- Public LiteRT-LM source contains GPU-related hooks and Metal sampler code, but the exposed OSS BUILD graph is incomplete for the full iOS GPU path.
+- Public LiteRT source contains the GPU registry and references to Metal accelerator targets, but the corresponding public `runtime/accelerators/gpu` package is not currently available in the OSS tree.
+
+Practical impact:
+
+- `CPU` is the reliable backend today.
+- `GPU` should be treated as experimental / blocked upstream on iOS until the runtime gap is closed.
+- The active fork strategy for investigating this gap is tracked in [Docs/Plans/LiteRT-Fork-Plan.md](Docs/Plans/LiteRT-Fork-Plan.md).
+
 ## Features
 
 - On-device LLM inference with Gemma and other LiteRT-LM models
@@ -15,6 +39,8 @@ A Swift Package for running LLM inference on-device using Google's [LiteRT-LM](h
 - Image preprocessing for camera photos
 - Swift 6 concurrency with actor-based thread safety
 - CPU, GPU (Metal), and NPU backend support
+
+Note: on iOS, `GPU` is currently limited by the upstream runtime issue described above.
 
 ## Requirements
 

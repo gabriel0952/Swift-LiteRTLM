@@ -9,6 +9,13 @@ REF="${LITERT_LM_REF:-main}"
 BAZEL="${BAZEL:-bazelisk}"
 C_TARGET="${C_TARGET:-//c:libLiteRTLMEngine.dylib}"
 PROVIDER_NAME="libGemmaModelConstraintProvider.dylib"
+OPTIONAL_RUNTIME_DYLIBS=(
+  "libLiteRtGpuAccelerator.dylib"
+  "libLiteRtMetalAccelerator.dylib"
+  "libLiteRtWebGpuAccelerator.dylib"
+  "libLiteRtTopKMetalSampler.dylib"
+  "libLiteRtTopKWebGpuSampler.dylib"
+)
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 FRAMEWORKS_DIR="$ROOT_DIR/Frameworks"
 OUTPUT="$FRAMEWORKS_DIR/LiteRTLM.xcframework"
@@ -16,6 +23,8 @@ BUILD_DIR="$(mktemp -d)/litert-lm-src"
 WORK_DIR="$(mktemp -d)/litert-lm-framework"
 DEVICE_DYLIB="$WORK_DIR/libLiteRTLMEngine-device.dylib"
 SIM_DYLIB="$WORK_DIR/libLiteRTLMEngine-sim.dylib"
+
+mkdir -p "$WORK_DIR"
 
 cleanup() {
   rm -rf "$BUILD_DIR" "$WORK_DIR"
@@ -79,6 +88,7 @@ make_framework() {
   local slice_dir="$1"
   local dylib_path="$2"
   local provider_path="$3"
+  local runtime_dir="$4"
 
   mkdir -p "$slice_dir/CLiteRTLM.framework/Headers" "$slice_dir/CLiteRTLM.framework/Modules"
   cp "$dylib_path" "$slice_dir/CLiteRTLM.framework/CLiteRTLM"
@@ -118,6 +128,15 @@ EOF
 
   codesign --force --sign - "$slice_dir/CLiteRTLM.framework/CLiteRTLM" >/dev/null
   codesign --force --sign - "$slice_dir/CLiteRTLM.framework/$PROVIDER_NAME" >/dev/null
+
+  for runtime_name in "${OPTIONAL_RUNTIME_DYLIBS[@]}"; do
+    if [ -f "$runtime_dir/$runtime_name" ]; then
+      cp "$runtime_dir/$runtime_name" "$slice_dir/CLiteRTLM.framework/$runtime_name"
+      install_name_tool -id "@rpath/$runtime_name" "$slice_dir/CLiteRTLM.framework/$runtime_name" || true
+      codesign --force --sign - "$slice_dir/CLiteRTLM.framework/$runtime_name" >/dev/null
+      echo "==> Bundled optional runtime: $runtime_name"
+    fi
+  done
 }
 
 echo "==> Cloning LiteRT-LM..."
@@ -135,8 +154,8 @@ patch_upstream_stream_callback
 build_slice ios_arm64 "$DEVICE_DYLIB"
 build_slice ios_sim_arm64 "$SIM_DYLIB"
 
-make_framework "$WORK_DIR/ios-arm64" "$DEVICE_DYLIB" "$BUILD_DIR/prebuilt/ios_arm64/$PROVIDER_NAME"
-make_framework "$WORK_DIR/ios-arm64-simulator" "$SIM_DYLIB" "$BUILD_DIR/prebuilt/ios_sim_arm64/$PROVIDER_NAME"
+make_framework "$WORK_DIR/ios-arm64" "$DEVICE_DYLIB" "$BUILD_DIR/prebuilt/ios_arm64/$PROVIDER_NAME" "$BUILD_DIR/prebuilt/ios_arm64"
+make_framework "$WORK_DIR/ios-arm64-simulator" "$SIM_DYLIB" "$BUILD_DIR/prebuilt/ios_sim_arm64/$PROVIDER_NAME" "$BUILD_DIR/prebuilt/ios_sim_arm64"
 
 echo "==> Packaging XCFramework..."
 rm -rf "$OUTPUT"

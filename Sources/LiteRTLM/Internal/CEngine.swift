@@ -318,7 +318,13 @@ enum CEngine {
             }
 
         case .gpu:
+#if targetEnvironment(simulator)
+            throw LiteRtLmError.unsupportedFeature(
+                "GPU backend is not available on iOS Simulator. Use .cpu() for Simulator testing."
+            )
+#else
             break
+#endif
         }
     }
 

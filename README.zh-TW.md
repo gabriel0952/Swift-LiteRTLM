@@ -4,6 +4,14 @@
 
 一個 Swift Package，將 Google 的 [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM) C++ runtime 封裝成 Swift 介面，讓你在 iOS 裝置上執行本地 LLM 推論。支援 Gemma 等模型的多輪對話、串流輸出、多模態輸入、工具呼叫等功能。
 
+## Repository 結構
+
+- `Package.swift`、`Sources/`、`Tests/`、`Frameworks/`：Swift Package 本體
+- `Apps/test-app/`：本地 Flutter 測試 app，用來驗證 package
+- `Forks/LiteRT-LM/`：預留給後續 LiteRT-LM fork 工作區
+- `Forks/LiteRT/`：預留給後續 LiteRT fork 工作區
+- `Docs/Plans/`：實作計畫與研究筆記
+
 ## 功能特色
 
 - 端側 LLM 推論，完全離線執行 Gemma 等 LiteRT-LM 模型
